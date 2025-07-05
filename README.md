@@ -1,6 +1,11 @@
 # Catch all the colors Game 🌈
 
-A fun 2D top-down labyrinth game where you collect rainbow colors while avoiding cute poop enemies!
+## Background / Why?
+To get my kid more into gaming, I had an idea of getting her excited about coming up with ideas for games that she can then play. It is a struggle finding games that are not scary, or where you are punished when failing and so on. We bounce ideas, and will probably prototype on paper and I will try to implement the ideas, we shall see where this ends up and if it's a regular thing.
+
+
+## What this is
+A 'fun' 2D top-down labyrinth game where you collect rainbow colors while avoiding cute poop enemies!
 
 ## How to Play
 
