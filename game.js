@@ -27,6 +27,7 @@ class Game {
             '#4400FF', // Indigo
             '#8800FF'  // Violet
         ];
+        this.availableColors = [...this.rainbowColors]; // Track which colors haven't been collected yet
         
         // Game state
         this.gameState = 'playing'; // 'playing' or 'celebrating'
@@ -114,10 +115,12 @@ class Game {
     }
     
     spawnColorDots() {
-        // Spawn fewer initial colors since new ones will continuously appear
-        const availableColors = [...this.rainbowColors];
-        
-        for (let i = 0; i < 3; i++) { // Reduced from 7 to 3 initial colors
+        // Spawn initial colors from available colors
+        for (let i = 0; i < 3; i++) { // Start with 3 colors
+            if (this.availableColors.length === 0) {
+                this.availableColors = [...this.rainbowColors];
+            }
+            
             let x, y;
             let attempts = 0;
             do {
@@ -146,8 +149,10 @@ class Game {
                 );
             }
             
-            const colorIndex = Math.floor(Math.random() * availableColors.length);
-            const color = availableColors[colorIndex]; // Don't remove color from array
+            // Pick a unique color
+            const colorIndex = Math.floor(Math.random() * this.availableColors.length);
+            const color = this.availableColors[colorIndex];
+            this.availableColors.splice(colorIndex, 1); // Remove from available
             this.colorDots.push(new ColorDot(x, y, this.cellSize, color));
         }
     }
@@ -389,20 +394,36 @@ class Game {
         this.collectedColors.push(color);
         this.score++; // Increment score
         
+        console.log('Color collected:', color, 'Total collected:', this.collectedColors.length, 'Score:', this.score);
+        
         // Spawn a new color dot immediately
         this.spawnNewColorDot();
         
-        // Optional: Check if rainbow is complete for celebration (but don't end game)
-        if (this.collectedColors.length === 7) {
-            // Remove the oldest color to make room for new ones
+        // Check if we've collected a complete rainbow (7 colors) for celebration
+        if (this.collectedColors.length === 7 && this.availableColors.length === 0) {
+            console.log('Complete rainbow collected! 🌈');
+            // Brief celebration effect but keep playing
+            this.startRainbowCompleteEffect();
+        }
+        
+        // Keep colors manageable - remove oldest if we have too many
+        if (this.collectedColors.length > 14) { // Allow 2 full rainbows
             this.collectedColors.shift();
-            // You could add a brief celebration effect here if desired
         }
     }
     
     spawnNewColorDot() {
-        // Choose a random color from the rainbow
-        const color = this.rainbowColors[Math.floor(Math.random() * this.rainbowColors.length)];
+        // If no more unique colors available, reset the available colors
+        if (this.availableColors.length === 0) {
+            this.availableColors = [...this.rainbowColors];
+            console.log('All rainbow colors collected! Starting new rainbow cycle.');
+        }
+        
+        // Choose a random color from available colors (ensuring uniqueness)
+        const colorIndex = Math.floor(Math.random() * this.availableColors.length);
+        const color = this.availableColors[colorIndex];
+        // Remove the color from available colors so it won't be picked again until cycle resets
+        this.availableColors.splice(colorIndex, 1);
         
         let x, y;
         let attempts = 0;
@@ -434,7 +455,7 @@ class Game {
         
         // Actually create and add the new color dot
         this.colorDots.push(new ColorDot(x, y, this.cellSize, color));
-        console.log('New color spawned:', color, 'at', x, y, 'Total colors:', this.colorDots.length);
+        console.log('New color spawned:', color, 'at', x, y, 'Remaining colors:', this.availableColors.length);
     }
     
     startCelebration() {
@@ -463,6 +484,7 @@ class Game {
     resetGame() {
         this.collectedColors = [];
         this.colorDots = [];
+        this.availableColors = [...this.rainbowColors]; // Reset available colors
         this.score = 0; // Reset score
         this.player.gridX = 1;
         this.player.gridY = 1;
@@ -477,6 +499,8 @@ class Game {
     updateUI() {
         const colorsDisplay = document.getElementById('colorsDisplay');
         colorsDisplay.innerHTML = '';
+        
+        console.log('Updating UI with collected colors:', this.collectedColors.length, this.collectedColors);
         
         this.collectedColors.forEach(color => {
             const colorDiv = document.createElement('div');
@@ -547,6 +571,12 @@ class Game {
         
         // Render rainbow trail if colors collected
         this.renderRainbowTrail();
+        
+        // Render rainbow complete effect if active
+        this.renderRainbowCompleteEffect();
+        
+        // Render rainbow complete effect if active
+        this.renderRainbowCompleteEffect();
     }
 
     renderWallBreakEffects() {
@@ -570,25 +600,70 @@ class Game {
     renderRainbowTrail() {
         if (this.collectedColors.length === 0) return;
         
-        const time = Date.now() * 0.005;
+        const time = Date.now() * 0.003; // Slower rotation for smoother look
+        const playerCenterX = this.player.x + this.cellSize / 2;
+        const playerCenterY = this.player.y + this.cellSize / 2;
+        
         this.collectedColors.forEach((color, index) => {
-            const angle = time + index * 0.8;
-            const radius = 30 + index * 5;
-            const x = this.player.x + this.cellSize / 2 + Math.cos(angle) * radius;
-            const y = this.player.y + this.cellSize / 2 + Math.sin(angle) * radius;
+            // Create a circular swirl pattern
+            const baseAngle = (index / this.collectedColors.length) * Math.PI * 2;
+            const rotationSpeed = time;
+            const angle = baseAngle + rotationSpeed;
             
+            // Create multiple rings of colors
+            const ringNumber = Math.floor(index / 7); // 7 colors per ring (full rainbow)
+            const baseRadius = 25 + ringNumber * 25; // Each ring is 25 pixels further out
+            
+            // Add some gentle wobble for organic feel
+            const wobble = Math.sin(time * 2 + index * 0.5) * 3;
+            const radius = baseRadius + wobble;
+            
+            const x = playerCenterX + Math.cos(angle) * radius;
+            const y = playerCenterY + Math.sin(angle) * radius;
+            
+            // Dot size gets slightly smaller for outer rings
+            const dotSize = Math.max(4, 8 - ringNumber * 1);
+            
+            // Create the main dot
             this.ctx.fillStyle = color;
             this.ctx.beginPath();
-            this.ctx.arc(x, y, 6, 0, Math.PI * 2);
+            this.ctx.arc(x, y, dotSize, 0, Math.PI * 2);
             this.ctx.fill();
             
-            // Add glow effect
+            // Add a glowing effect
+            this.ctx.save();
             this.ctx.shadowColor = color;
-            this.ctx.shadowBlur = 10;
+            this.ctx.shadowBlur = 15;
+            this.ctx.globalAlpha = 0.8;
             this.ctx.beginPath();
-            this.ctx.arc(x, y, 6, 0, Math.PI * 2);
+            this.ctx.arc(x, y, dotSize, 0, Math.PI * 2);
             this.ctx.fill();
-            this.ctx.shadowBlur = 0;
+            this.ctx.restore();
+            
+            // Add connecting trails between dots for extra effect
+            if (index > 0) {
+                const prevIndex = index - 1;
+                const prevBaseAngle = (prevIndex / this.collectedColors.length) * Math.PI * 2;
+                const prevAngle = prevBaseAngle + rotationSpeed;
+                const prevRingNumber = Math.floor(prevIndex / 7);
+                const prevBaseRadius = 25 + prevRingNumber * 25;
+                const prevWobble = Math.sin(time * 2 + prevIndex * 0.5) * 3;
+                const prevRadius = prevBaseRadius + prevWobble;
+                
+                const prevX = playerCenterX + Math.cos(prevAngle) * prevRadius;
+                const prevY = playerCenterY + Math.sin(prevAngle) * prevRadius;
+                
+                // Draw a faint connecting line
+                this.ctx.save();
+                this.ctx.strokeStyle = color;
+                this.ctx.globalAlpha = 0.3;
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.moveTo(prevX, prevY);
+                this.ctx.lineTo(x, y);
+                this.ctx.stroke();
+                this.ctx.restore();
+            }
         });
     }
     
@@ -714,6 +789,45 @@ class Game {
             
             this.ctx.restore();
         }
+    }
+    
+    startRainbowCompleteEffect() {
+        // Store the effect data for a brief visual celebration
+        this.rainbowCompleteEffect = {
+            startTime: Date.now(),
+            duration: 2000 // 2 seconds
+        };
+    }
+    
+    renderRainbowCompleteEffect() {
+        if (!this.rainbowCompleteEffect) return;
+        
+        const elapsed = Date.now() - this.rainbowCompleteEffect.startTime;
+        if (elapsed > this.rainbowCompleteEffect.duration) {
+            this.rainbowCompleteEffect = null;
+            return;
+        }
+        
+        const progress = elapsed / this.rainbowCompleteEffect.duration;
+        const alpha = Math.sin(progress * Math.PI) * 0.8; // Fade in and out
+        
+        // Create a rainbow burst effect
+        this.ctx.save();
+        this.ctx.globalAlpha = alpha;
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.font = '24px Arial';
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 2;
+        
+        const text = '🌈 RAINBOW COMPLETE! 🌈';
+        const x = this.width / 2;
+        const y = 80;
+        
+        this.ctx.strokeText(text, x, y);
+        this.ctx.fillText(text, x, y);
+        this.ctx.restore();
     }
     
     gameLoop() {
