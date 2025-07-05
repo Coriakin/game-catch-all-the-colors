@@ -1117,36 +1117,112 @@ class Player {
         const centerX = this.x + this.cellSize / 2;
         const centerY = this.y + this.cellSize / 2;
         
-        // Draw girl character
+        // Draw girl character with long hair
+        
+        // Long hair - back layer (behind head)
+        ctx.fillStyle = '#8b4513'; // Brown hair
+        ctx.beginPath();
+        // Left side hair
+        ctx.ellipse(centerX - 6, centerY - 2, 3, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Right side hair  
+        ctx.beginPath();
+        ctx.ellipse(centerX + 6, centerY - 2, 3, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Back hair flowing down
+        ctx.beginPath();
+        ctx.ellipse(centerX - 4, centerY + 6, 2, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(centerX + 4, centerY + 6, 2, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
         // Head
-        ctx.fillStyle = '#ffdbac';
+        ctx.fillStyle = '#ffdbac'; // Skin tone
         ctx.beginPath();
         ctx.arc(centerX, centerY - 3, 6, 0, Math.PI * 2);
         ctx.fill();
         
-        // Hair
+        // Hair on top of head
         ctx.fillStyle = '#8b4513';
         ctx.beginPath();
-        ctx.arc(centerX, centerY - 5, 7, Math.PI, 2 * Math.PI);
+        ctx.arc(centerX, centerY - 8, 7, 0, Math.PI);
+        ctx.fill();
+        
+        // Hair bangs/fringe
+        ctx.beginPath();
+        ctx.ellipse(centerX - 3, centerY - 7, 2, 3, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY - 8, 2, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(centerX + 3, centerY - 7, 2, 3, 0.3, 0, Math.PI * 2);
         ctx.fill();
         
         // Body (dress)
-        ctx.fillStyle = '#ff69b4';
+        ctx.fillStyle = '#ff69b4'; // Pink dress
         ctx.beginPath();
         ctx.arc(centerX, centerY + 4, 5, 0, Math.PI * 2);
         ctx.fill();
         
-        // Eyes
+        // Dress details - add a belt/waist
+        ctx.fillStyle = '#ff1493'; // Darker pink belt
+        ctx.fillRect(centerX - 5, centerY + 1, 10, 1);
+        
+        // Eyes - make them bigger and more expressive
+        ctx.fillStyle = '#fff'; // White eye background
+        ctx.beginPath();
+        ctx.ellipse(centerX - 2, centerY - 4, 1.5, 1, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(centerX + 2, centerY - 4, 1.5, 1, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eye pupils
         ctx.fillStyle = '#000';
-        ctx.fillRect(centerX - 2, centerY - 4, 1, 1);
-        ctx.fillRect(centerX + 1, centerY - 4, 1, 1);
+        ctx.beginPath();
+        ctx.arc(centerX - 2, centerY - 4, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(centerX + 2, centerY - 4, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eye highlights
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(centerX - 2.3, centerY - 4.3, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(centerX + 1.7, centerY - 4.3, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eyelashes
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(centerX - 3, centerY - 5);
+        ctx.lineTo(centerX - 2.5, centerY - 5.5);
+        ctx.moveTo(centerX - 1.5, centerY - 5);
+        ctx.lineTo(centerX - 1, centerY - 5.5);
+        ctx.moveTo(centerX + 1, centerY - 5.5);
+        ctx.lineTo(centerX + 1.5, centerY - 5);
+        ctx.moveTo(centerX + 2.5, centerY - 5.5);
+        ctx.lineTo(centerX + 3, centerY - 5);
+        ctx.stroke();
         
         // Smile
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(centerX, centerY - 2, 2, 0, Math.PI);
+        ctx.arc(centerX, centerY - 1, 2, 0, Math.PI);
         ctx.stroke();
+        
+        // Small nose
+        ctx.fillStyle = '#ffdbac';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY - 2.5, 0.5, 0, Math.PI * 2);
+        ctx.fill();
     }
 }
 
