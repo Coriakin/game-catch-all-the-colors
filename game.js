@@ -404,9 +404,13 @@ class Game {
         this.player.targetY = this.cellSize;
         this.player.isMoving = false;
         
-        // Lose last collected color but keep the score
+        // Lose last collected color and decrement score
         if (this.collectedColors.length > 0) {
             const lostColor = this.collectedColors.pop();
+            this.score--; // Decrement score when losing a color
+            
+            console.log('Color lost due to enemy collision:', lostColor, 'Score decreased to:', this.score);
+            
             // Respawn the lost color somewhere in the maze
             let x, y;
             do {
