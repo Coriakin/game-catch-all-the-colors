@@ -1,4 +1,4 @@
-# Rainbow Collector Game 🌈
+# Catch all the colors Game 🌈
 
 A fun 2D top-down labyrinth game where you collect rainbow colors while avoiding cute poop enemies!
 

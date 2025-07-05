@@ -120,7 +120,7 @@ class Game {
     
     spawnColorDots() {
         // Spawn initial colors from available colors
-        for (let i = 0; i < 3; i++) { // Start with 3 colors
+        for (let i = 0; i < 8; i++) { // Start with 8 colors
             if (this.availableColors.length === 0) {
                 this.availableColors = [...this.rainbowColors];
             }
@@ -248,6 +248,11 @@ class Game {
         collectedColors.forEach(color => {
             this.collectColor(color);
         });
+        
+        // Ensure we always have 8 color dots in the labyrinth
+        while (this.colorDots.length < 8) {
+            this.spawnNewColorDot();
+        }
         
         // Update UI
         this.updateUI();
@@ -433,8 +438,7 @@ class Game {
         
         console.log('Color collected:', color, 'Total collected:', this.collectedColors.length, 'Score:', this.score);
         
-        // Spawn a new color dot immediately
-        this.spawnNewColorDot();
+        // Note: New color dots are now spawned automatically in the update loop to maintain 8 dots
         
         // Check if we've collected a complete rainbow (7 colors) for celebration
         if (this.collectedColors.length === 7 && this.availableColors.length === 0) {
