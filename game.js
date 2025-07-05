@@ -39,6 +39,10 @@ class Game {
         this.celebrationWaveOffset = 0;
         this.score = 0; // Track total colors collected
         
+        // Debug mode for touch controls (set to true to see touch zones)
+        // Change this to true to visualize touch areas for debugging
+        this.debugTouchZones = false;
+        
         this.setupGame();
         this.setupControls();
         this.gameLoop();
@@ -176,6 +180,13 @@ class Game {
 
         this.lastDirection = { x: 0, y: -1 }; // Default facing up
 
+        // Touch control variables
+        this.touchZoneSize = 100; // Size of touch zones around player
+        this.lastTouchTime = 0;
+        this.doubleTapDelay = 300; // milliseconds
+        this.touchActive = false;
+
+        // Keyboard controls
         document.addEventListener('keydown', (e) => {
             const key = e.key.toLowerCase();
             if (key in this.keys) {
@@ -197,6 +208,116 @@ class Game {
                 e.preventDefault();
             }
         });
+
+        // Touch controls for iPad
+        this.setupTouchControls();
+    }
+
+    setupTouchControls() {
+        // Prevent default touch behaviors
+        this.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+        this.canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+        this.canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
+
+        // Touch start event
+        this.canvas.addEventListener('touchstart', (e) => {
+            this.handleTouchStart(e);
+        });
+
+        // Touch end event - reset movement
+        this.canvas.addEventListener('touchend', (e) => {
+            this.handleTouchEnd(e);
+        });
+
+        // Touch move for continuous movement
+        this.canvas.addEventListener('touchmove', (e) => {
+            this.handleTouchMove(e);
+        });
+    }
+
+    handleTouchStart(e) {
+        const touch = e.touches[0];
+        const rect = this.canvas.getBoundingClientRect();
+        const touchX = touch.clientX - rect.left;
+        const touchY = touch.clientY - rect.top;
+
+        // Scale touch coordinates to canvas coordinates
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const canvasX = touchX * scaleX;
+        const canvasY = touchY * scaleY;
+
+        // Check for double tap (wall breaking)
+        const currentTime = Date.now();
+        if (currentTime - this.lastTouchTime < this.doubleTapDelay) {
+            // Double tap detected - break wall
+            this.keys.space = true;
+            setTimeout(() => { this.keys.space = false; }, 50); // Brief activation
+        }
+        this.lastTouchTime = currentTime;
+
+        // Handle directional movement based on touch position relative to player
+        this.handleTouchDirection(canvasX, canvasY);
+        this.touchActive = true;
+    }
+
+    handleTouchMove(e) {
+        if (!this.touchActive) return;
+
+        const touch = e.touches[0];
+        const rect = this.canvas.getBoundingClientRect();
+        const touchX = touch.clientX - rect.left;
+        const touchY = touch.clientY - rect.top;
+
+        // Scale touch coordinates to canvas coordinates
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const canvasX = touchX * scaleX;
+        const canvasY = touchY * scaleY;
+
+        this.handleTouchDirection(canvasX, canvasY);
+    }
+
+    handleTouchEnd(e) {
+        // Reset all movement keys when touch ends
+        this.keys.w = false;
+        this.keys.s = false;
+        this.keys.a = false;
+        this.keys.d = false;
+        this.touchActive = false;
+    }
+
+    handleTouchDirection(canvasX, canvasY) {
+        // Get player's current screen position
+        const playerScreenX = this.player.x + this.cellSize / 2;
+        const playerScreenY = this.player.y + this.cellSize / 2;
+
+        // Calculate distance from player center
+        const deltaX = canvasX - playerScreenX;
+        const deltaY = canvasY - playerScreenY;
+
+        // Reset all movement keys first
+        this.keys.w = false;
+        this.keys.s = false;
+        this.keys.a = false;
+        this.keys.d = false;
+
+        // Determine direction based on which is greater: horizontal or vertical distance
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            // Horizontal movement
+            if (deltaX > 20) { // Add dead zone to prevent accidental movement
+                this.keys.d = true; // Move right
+            } else if (deltaX < -20) {
+                this.keys.a = true; // Move left
+            }
+        } else {
+            // Vertical movement
+            if (deltaY > 20) { // Add dead zone
+                this.keys.s = true; // Move down
+            } else if (deltaY < -20) {
+                this.keys.w = true; // Move up
+            }
+        }
     }
     
     update() {
@@ -616,6 +737,11 @@ class Game {
         
         // Render rainbow complete effect if active
         this.renderRainbowCompleteEffect();
+        
+        // Debug: Render touch zones if enabled
+        if (this.debugTouchZones) {
+            this.renderTouchZones();
+        }
     }
 
     renderWallBreakEffects() {
@@ -861,6 +987,43 @@ class Game {
         
         this.ctx.strokeText(text, x, y);
         this.ctx.fillText(text, x, y);
+        this.ctx.restore();
+    }
+    
+    renderTouchZones() {
+        if (!this.player) return;
+        
+        const playerCenterX = this.player.x + this.cellSize / 2;
+        const playerCenterY = this.player.y + this.cellSize / 2;
+        const zoneSize = this.touchZoneSize;
+        
+        this.ctx.save();
+        this.ctx.globalAlpha = 0.3;
+        this.ctx.strokeStyle = '#00ff00';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([5, 5]);
+        
+        // Draw cross-shaped touch zones
+        // Left zone
+        this.ctx.strokeRect(playerCenterX - zoneSize, playerCenterY - zoneSize/2, zoneSize/2, zoneSize);
+        this.ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+        this.ctx.fillRect(playerCenterX - zoneSize, playerCenterY - zoneSize/2, zoneSize/2, zoneSize);
+        
+        // Right zone
+        this.ctx.strokeRect(playerCenterX + zoneSize/2, playerCenterY - zoneSize/2, zoneSize/2, zoneSize);
+        this.ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
+        this.ctx.fillRect(playerCenterX + zoneSize/2, playerCenterY - zoneSize/2, zoneSize/2, zoneSize);
+        
+        // Up zone
+        this.ctx.strokeRect(playerCenterX - zoneSize/2, playerCenterY - zoneSize, zoneSize, zoneSize/2);
+        this.ctx.fillStyle = 'rgba(0, 0, 255, 0.1)';
+        this.ctx.fillRect(playerCenterX - zoneSize/2, playerCenterY - zoneSize, zoneSize, zoneSize/2);
+        
+        // Down zone
+        this.ctx.strokeRect(playerCenterX - zoneSize/2, playerCenterY + zoneSize/2, zoneSize, zoneSize/2);
+        this.ctx.fillStyle = 'rgba(255, 255, 0, 0.1)';
+        this.ctx.fillRect(playerCenterX - zoneSize/2, playerCenterY + zoneSize/2, zoneSize, zoneSize/2);
+        
         this.ctx.restore();
     }
     

@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Catch all the colors</title>
     <style>
         body {
@@ -29,6 +31,8 @@
             border: 3px solid #fff;
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            touch-action: none; /* Prevent default touch behaviors */
+            user-select: none; /* Prevent text selection */
         }
         
         .ui {
@@ -64,6 +68,40 @@
             margin-top: 10px;
             opacity: 0.8;
         }
+        
+        /* Responsive design for tablets and mobile */
+        @media screen and (max-width: 1024px) {
+            .game-container {
+                padding: 10px;
+                margin: 10px;
+            }
+            
+            canvas {
+                max-width: 100%;
+                height: auto;
+            }
+            
+            .instructions {
+                font-size: 12px;
+            }
+        }
+        
+        @media screen and (max-width: 768px) {
+            body {
+                min-height: 100vh;
+                padding: 5px;
+            }
+            
+            .game-container {
+                padding: 5px;
+                margin: 5px;
+                border-radius: 10px;
+            }
+            
+            .instructions {
+                font-size: 11px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -71,7 +109,7 @@
         <div class="ui">
             <div class="score">Catch all the colors</div>
             <div class="colors-collected" id="colorsDisplay"></div>
-            <div class="instructions">Use WASD or Arrow Keys to move • Press SPACE to break walls • Collect all colors to complete the rainbow!</div>
+            <div class="instructions">Use WASD/Arrow Keys to move or touch around your character • Double-tap or SPACE to break walls • Collect all colors!</div>
         </div>
         <canvas id="gameCanvas" width="800" height="600"></canvas>
     </div>
