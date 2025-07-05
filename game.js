@@ -941,29 +941,9 @@ class Enemy {
     }
     
     update(maze) {
-        this.moveTimer++;
-        
-        if (this.moveTimer >= this.moveDelay) {
-            this.moveTimer = 0;
-            this.moveDelay = 60 + Math.random() * 60;
-            
-            // Random movement
-            const directions = [
-                [0, -1], [1, 0], [0, 1], [-1, 0]
-            ];
-            
-            const direction = directions[Math.floor(Math.random() * directions.length)];
-            const newX = this.gridX + direction[0];
-            const newY = this.gridY + direction[1];
-            
-            // Check bounds and walls
-            if (newX >= 0 && newX < maze.cols && newY >= 0 && newY < maze.rows && maze.grid[newY][newX] === 0) {
-                this.gridX = newX;
-                this.gridY = newY;
-                this.x = newX * this.cellSize;
-                this.y = newY * this.cellSize;
-            }
-        }
+        // Enemies are now stationary by default
+        // They don't move unless specifically told to do so
+        // You can add movement logic here later if needed
     }
     
     render(ctx) {
