@@ -1208,26 +1208,104 @@ class ColorDot {
         this.gridX = gridX;
         this.gridY = gridY;
         this.cellSize = cellSize;
-        this.x = gridX * cellSize;
-        this.y = gridY * cellSize;
+        this.x = gridX * cellSize + cellSize / 2; // Start at center of cell
+        this.y = gridY * cellSize + cellSize / 2;
         this.color = color;
         this.floatOffset = 0;
         this.pulsePhase = Math.random() * Math.PI * 2;
+        
+        // Fairy-like movement properties
+        this.velocity = { x: 0, y: 0 };
+        this.targetVelocity = { x: 0, y: 0 };
+        this.speed = 0.3 + Math.random() * 0.4; // Random speed between 0.3 and 0.7
+        this.directionChangeTimer = 0;
+        this.directionChangeDelay = 60 + Math.random() * 120; // Change direction every 1-3 seconds
+        this.maxDistance = cellSize * 1.5; // Maximum distance from original grid position
+        this.originalX = this.x;
+        this.originalY = this.y;
+        this.flutterIntensity = 0.5 + Math.random() * 0.5; // How erratic the movement is
     }
     
     update() {
         this.floatOffset += 0.1;
         this.pulsePhase += 0.1;
+        this.directionChangeTimer++;
+        
+        // Change direction periodically or when too far from original position
+        const distanceFromOrigin = Math.sqrt(
+            Math.pow(this.x - this.originalX, 2) + Math.pow(this.y - this.originalY, 2)
+        );
+        
+        if (this.directionChangeTimer >= this.directionChangeDelay || distanceFromOrigin > this.maxDistance) {
+            this.chooseNewDirection(distanceFromOrigin > this.maxDistance);
+            this.directionChangeTimer = 0;
+            this.directionChangeDelay = 30 + Math.random() * 90; // Vary the timing
+        }
+        
+        // Smoothly interpolate towards target velocity
+        this.velocity.x += (this.targetVelocity.x - this.velocity.x) * 0.1;
+        this.velocity.y += (this.targetVelocity.y - this.velocity.y) * 0.1;
+        
+        // Add some flutter/erratic movement
+        const flutter = Math.sin(this.floatOffset * 3) * this.flutterIntensity;
+        const flutterX = Math.cos(this.floatOffset * 2.3 + flutter) * 0.3;
+        const flutterY = Math.sin(this.floatOffset * 1.7 + flutter) * 0.3;
+        
+        // Apply movement
+        this.x += this.velocity.x + flutterX;
+        this.y += this.velocity.y + flutterY;
+        
+        // Update grid position for collision detection
+        this.gridX = Math.floor(this.x / this.cellSize);
+        this.gridY = Math.floor(this.y / this.cellSize);
+    }
+    
+    chooseNewDirection(returnToOrigin = false) {
+        if (returnToOrigin) {
+            // Move back towards original position
+            const dx = this.originalX - this.x;
+            const dy = this.originalY - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 0) {
+                this.targetVelocity.x = (dx / distance) * this.speed;
+                this.targetVelocity.y = (dy / distance) * this.speed;
+            }
+        } else {
+            // Choose a random direction
+            const angle = Math.random() * Math.PI * 2;
+            const speedVariation = 0.5 + Math.random() * 0.5; // Vary speed
+            
+            this.targetVelocity.x = Math.cos(angle) * this.speed * speedVariation;
+            this.targetVelocity.y = Math.sin(angle) * this.speed * speedVariation;
+        }
     }
     
     render(ctx) {
-        const centerX = this.x + this.cellSize / 2;
-        const centerY = this.y + this.cellSize / 2 + Math.sin(this.floatOffset) * 2;
+        const centerX = this.x;
+        const centerY = this.y + Math.sin(this.floatOffset) * 2;
         const radius = 5 + Math.sin(this.pulsePhase) * 1;
+        
+        // Add trailing sparkle effect for fairy-like appearance
+        const trailLength = 3;
+        for (let i = 0; i < trailLength; i++) {
+            const trailAlpha = (1 - i / trailLength) * 0.3;
+            const trailSize = radius * (1 - i * 0.2);
+            const trailX = centerX - this.velocity.x * i * 3;
+            const trailY = centerY - this.velocity.y * i * 3;
+            
+            ctx.save();
+            ctx.globalAlpha = trailAlpha;
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(trailX, trailY, trailSize, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
         
         // Glow effect
         ctx.shadowColor = this.color;
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 20; // Increased glow for fairy effect
         
         // Main dot
         ctx.fillStyle = this.color;
@@ -1236,10 +1314,28 @@ class ColorDot {
         ctx.fill();
         
         // Inner highlight
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         ctx.beginPath();
         ctx.arc(centerX - 1, centerY - 1, radius * 0.4, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Sparkle effect
+        const sparkleTime = Date.now() * 0.01;
+        for (let i = 0; i < 3; i++) {
+            const sparkleAngle = sparkleTime + i * (Math.PI * 2 / 3);
+            const sparkleDistance = radius + 8 + Math.sin(sparkleTime * 2 + i) * 3;
+            const sparkleX = centerX + Math.cos(sparkleAngle) * sparkleDistance;
+            const sparkleY = centerY + Math.sin(sparkleAngle) * sparkleDistance;
+            const sparkleAlpha = (Math.sin(sparkleTime * 3 + i * 1.5) + 1) * 0.3;
+            
+            ctx.save();
+            ctx.globalAlpha = sparkleAlpha;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(sparkleX, sparkleY, 1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
         
         ctx.shadowBlur = 0;
     }
