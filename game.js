@@ -32,6 +32,7 @@ class Game {
         this.gameState = 'playing'; // 'playing' or 'celebrating'
         this.celebrationStartTime = 0;
         this.celebrationWaveOffset = 0;
+        this.score = 0; // Track total colors collected
         
         this.setupGame();
         this.setupControls();
@@ -113,10 +114,10 @@ class Game {
     }
     
     spawnColorDots() {
-        // Spawn rainbow colors in random order
+        // Spawn fewer initial colors since new ones will continuously appear
         const availableColors = [...this.rainbowColors];
         
-        for (let i = 0; i < 7; i++) {
+        for (let i = 0; i < 3; i++) { // Reduced from 7 to 3 initial colors
             let x, y;
             let attempts = 0;
             do {
@@ -146,7 +147,7 @@ class Game {
             }
             
             const colorIndex = Math.floor(Math.random() * availableColors.length);
-            const color = availableColors.splice(colorIndex, 1)[0];
+            const color = availableColors[colorIndex]; // Don't remove color from array
             this.colorDots.push(new ColorDot(x, y, this.cellSize, color));
         }
     }
@@ -222,12 +223,18 @@ class Game {
         });
         
         // Check collisions with color dots (using grid positions for accuracy)
+        let collectedColors = [];
         this.colorDots = this.colorDots.filter(dot => {
             if (this.player.gridX === dot.gridX && this.player.gridY === dot.gridY) {
-                this.collectColor(dot.color);
+                collectedColors.push(dot.color);
                 return false;
             }
             return true;
+        });
+        
+        // Process collected colors after filtering
+        collectedColors.forEach(color => {
+            this.collectColor(color);
         });
         
         // Update UI
@@ -359,7 +366,7 @@ class Game {
         this.player.targetY = this.cellSize;
         this.player.isMoving = false;
         
-        // Lose last collected color
+        // Lose last collected color but keep the score
         if (this.collectedColors.length > 0) {
             const lostColor = this.collectedColors.pop();
             // Respawn the lost color somewhere in the maze
@@ -370,7 +377,7 @@ class Game {
             } while (
                 this.maze.grid[y][x] === 1 || 
                 (x === 1 && y === 1) ||
-                this.colorDots.some(dot => dot.x === x && dot.y === y) ||
+                this.colorDots.some(dot => dot.gridX === x && dot.gridY === y) ||
                 this.enemies.some(enemy => enemy.gridX === x && enemy.gridY === y)
             );
             
@@ -380,11 +387,54 @@ class Game {
     
     collectColor(color) {
         this.collectedColors.push(color);
+        this.score++; // Increment score
         
-        // Check if rainbow is complete
+        // Spawn a new color dot immediately
+        this.spawnNewColorDot();
+        
+        // Optional: Check if rainbow is complete for celebration (but don't end game)
         if (this.collectedColors.length === 7) {
-            this.startCelebration();
+            // Remove the oldest color to make room for new ones
+            this.collectedColors.shift();
+            // You could add a brief celebration effect here if desired
         }
+    }
+    
+    spawnNewColorDot() {
+        // Choose a random color from the rainbow
+        const color = this.rainbowColors[Math.floor(Math.random() * this.rainbowColors.length)];
+        
+        let x, y;
+        let attempts = 0;
+        do {
+            x = Math.floor(Math.random() * this.cols);
+            y = Math.floor(Math.random() * this.rows);
+            attempts++;
+        } while (
+            attempts < 50 && (
+                this.maze.grid[y][x] === 1 || 
+                (x <= 3 && y <= 3) || // Avoid starting area
+                this.colorDots.some(dot => dot.gridX === x && dot.gridY === y) ||
+                this.enemies.some(enemy => enemy.gridX === x && enemy.gridY === y) ||
+                (this.player.gridX === x && this.player.gridY === y) // Avoid player position
+            )
+        );
+        
+        // If we couldn't find a good spot, place it anywhere valid
+        if (attempts >= 50) {
+            do {
+                x = Math.floor(Math.random() * this.cols);
+                y = Math.floor(Math.random() * this.rows);
+            } while (
+                this.maze.grid[y][x] === 1 || 
+                (x <= 3 && y <= 3) ||
+                (this.player.gridX === x && this.player.gridY === y)
+            );
+        }
+        
+        // Actually create and add the new color dot
+        this.colorDots.push(new ColorDot(x, y, this.cellSize, color));
+        console.log('New color spawned:', color, 'at', x, y, 'Total colors:', this.colorDots.length);
     }
     
     startCelebration() {
@@ -413,6 +463,7 @@ class Game {
     resetGame() {
         this.collectedColors = [];
         this.colorDots = [];
+        this.score = 0; // Reset score
         this.player.gridX = 1;
         this.player.gridY = 1;
         this.player.x = this.cellSize;
@@ -433,6 +484,28 @@ class Game {
             colorDiv.style.backgroundColor = color;
             colorsDisplay.appendChild(colorDiv);
         });
+        
+        // Update score display
+        this.updateScoreDisplay();
+    }
+    
+    updateScoreDisplay() {
+        let scoreElement = document.getElementById('scoreDisplay');
+        if (!scoreElement) {
+            // Create score display if it doesn't exist
+            scoreElement = document.createElement('div');
+            scoreElement.id = 'scoreDisplay';
+            scoreElement.style.position = 'absolute';
+            scoreElement.style.top = '20px';
+            scoreElement.style.right = '20px';
+            scoreElement.style.color = 'white';
+            scoreElement.style.fontSize = '24px';
+            scoreElement.style.fontWeight = 'bold';
+            scoreElement.style.textShadow = '2px 2px 4px rgba(0, 0, 0, 0.5)';
+            scoreElement.style.zIndex = '1000';
+            document.body.appendChild(scoreElement);
+        }
+        scoreElement.textContent = `Score: ${this.score}`;
     }
     
     render() {
