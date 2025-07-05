@@ -31,7 +31,7 @@ class Game {
         
         // Trail system for snake-like following
         this.playerTrail = []; // Store player's recent positions
-        this.maxTrailLength = 20; // Maximum positions to remember
+        this.maxTrailLength = 60; // Maximum positions to remember (increased for spaced segments)
         
         // Game state
         this.gameState = 'playing'; // 'playing' or 'celebrating'
@@ -266,8 +266,11 @@ class Game {
             
             this.playerTrail.unshift({ x: playerCenterX, y: playerCenterY });
             
-            // Adjust trail length based on collected colors
-            const dynamicTrailLength = Math.min(this.maxTrailLength, Math.max(10, this.collectedColors.length * 3));
+            // Calculate needed trail length for spaced segments
+            const segmentLength = 4; // Dots per color
+            const gapLength = 2; // Gap between colors
+            const neededLength = this.collectedColors.length * (segmentLength + gapLength) + 10; // Extra buffer
+            const dynamicTrailLength = Math.min(this.maxTrailLength, Math.max(15, neededLength));
             
             // Keep trail length manageable
             if (this.playerTrail.length > dynamicTrailLength) {
@@ -628,31 +631,33 @@ class Game {
     renderRainbowTrail() {
         if (this.collectedColors.length === 0 || this.playerTrail.length < 2) return;
         
-        // Calculate how many trail positions each color should occupy
-        const positionsPerColor = Math.max(2, Math.floor(this.playerTrail.length / Math.max(this.collectedColors.length, 1)));
+        // Calculate spacing between colors - each color gets a segment with gaps
+        const segmentLength = 4; // Number of trail positions per color segment
+        const gapLength = 2; // Number of empty positions between color segments
+        const totalSegmentSize = segmentLength + gapLength;
         
         this.collectedColors.forEach((color, colorIndex) => {
-            // Calculate which trail positions this color should occupy
-            const startPos = (colorIndex + 1) * positionsPerColor;
-            const endPos = Math.min(startPos + positionsPerColor, this.playerTrail.length);
+            // Calculate the starting position for this color segment
+            const segmentStart = (colorIndex * totalSegmentSize) + gapLength; // Start after initial gap
+            const segmentEnd = segmentStart + segmentLength;
             
-            // Skip if not enough trail positions
-            if (startPos >= this.playerTrail.length) return;
+            // Skip if this segment is beyond our trail
+            if (segmentStart >= this.playerTrail.length) return;
             
-            // Draw the color segment as connected dots
-            for (let i = startPos; i < endPos; i++) {
-                if (i >= this.playerTrail.length) break;
-                
+            // Draw the color segment
+            for (let i = segmentStart; i < Math.min(segmentEnd, this.playerTrail.length); i++) {
                 const trailPos = this.playerTrail[i];
-                const progress = (i - startPos) / (positionsPerColor - 1);
+                const segmentProgress = (i - segmentStart) / (segmentLength - 1);
                 
-                // Size decreases as we go further back in the trail
-                const baseSize = 8 - (colorIndex * 0.3);
-                const sizeMultiplier = 1 - (progress * 0.3); // Slightly smaller at the end of each segment
+                // Size varies within the segment - larger at the front, smaller at the back
+                const baseSize = 8 - (colorIndex * 0.2); // Slight size decrease for older colors
+                const sizeMultiplier = 1 - (segmentProgress * 0.4); // Size decreases within segment
                 const dotSize = Math.max(3, baseSize * sizeMultiplier);
                 
-                // Alpha decreases for older trail positions
-                const alpha = Math.max(0.3, 1 - (i / this.playerTrail.length) * 0.7);
+                // Alpha decreases for older trail positions but stays strong within each segment
+                const segmentAlpha = Math.max(0.4, 1 - (colorIndex * 0.05)); // Very gradual fade per color
+                const positionAlpha = 1 - (segmentProgress * 0.3); // Slight fade within segment
+                const alpha = segmentAlpha * positionAlpha;
                 
                 // Create the main dot
                 this.ctx.save();
@@ -664,19 +669,19 @@ class Game {
                 
                 // Add glow effect
                 this.ctx.shadowColor = color;
-                this.ctx.shadowBlur = 10;
+                this.ctx.shadowBlur = 12;
                 this.ctx.beginPath();
                 this.ctx.arc(trailPos.x, trailPos.y, dotSize, 0, Math.PI * 2);
                 this.ctx.fill();
                 this.ctx.restore();
                 
-                // Draw connecting line to previous dot for smoother trail
-                if (i > startPos && i > 0) {
+                // Draw connecting line to previous dot within the same segment
+                if (i > segmentStart && i > 0) {
                     const prevPos = this.playerTrail[i - 1];
                     this.ctx.save();
-                    this.ctx.globalAlpha = alpha * 0.6;
+                    this.ctx.globalAlpha = alpha * 0.7;
                     this.ctx.strokeStyle = color;
-                    this.ctx.lineWidth = dotSize * 0.8;
+                    this.ctx.lineWidth = dotSize * 0.6;
                     this.ctx.lineCap = 'round';
                     this.ctx.beginPath();
                     this.ctx.moveTo(prevPos.x, prevPos.y);
