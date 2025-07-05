@@ -29,6 +29,10 @@ class Game {
         ];
         this.availableColors = [...this.rainbowColors]; // Track which colors haven't been collected yet
         
+        // Trail system for snake-like following
+        this.playerTrail = []; // Store player's recent positions
+        this.maxTrailLength = 20; // Maximum positions to remember
+        
         // Game state
         this.gameState = 'playing'; // 'playing' or 'celebrating'
         this.celebrationStartTime = 0;
@@ -207,6 +211,9 @@ class Game {
         // Update player movement
         this.player.update();
         
+        // Update player trail for snake-like color following
+        this.updatePlayerTrail();
+        
         // Update enemies
         this.enemies.forEach(enemy => {
             enemy.update(this.maze);
@@ -244,6 +251,29 @@ class Game {
         
         // Update UI
         this.updateUI();
+    }
+
+    
+    updatePlayerTrail() {
+        // Add current player position to trail
+        const playerCenterX = this.player.x + this.cellSize / 2;
+        const playerCenterY = this.player.y + this.cellSize / 2;
+        
+        // Only add if player has moved enough distance
+        if (this.playerTrail.length === 0 || 
+            Math.abs(this.playerTrail[0].x - playerCenterX) > 2 || 
+            Math.abs(this.playerTrail[0].y - playerCenterY) > 2) {
+            
+            this.playerTrail.unshift({ x: playerCenterX, y: playerCenterY });
+            
+            // Adjust trail length based on collected colors
+            const dynamicTrailLength = Math.min(this.maxTrailLength, Math.max(10, this.collectedColors.length * 3));
+            
+            // Keep trail length manageable
+            if (this.playerTrail.length > dynamicTrailLength) {
+                this.playerTrail.pop();
+            }
+        }
     }
 
     updateWallBreakEffects() {
@@ -485,6 +515,7 @@ class Game {
         this.collectedColors = [];
         this.colorDots = [];
         this.availableColors = [...this.rainbowColors]; // Reset available colors
+        this.playerTrail = []; // Reset trail
         this.score = 0; // Reset score
         this.player.gridX = 1;
         this.player.gridY = 1;
@@ -574,9 +605,6 @@ class Game {
         
         // Render rainbow complete effect if active
         this.renderRainbowCompleteEffect();
-        
-        // Render rainbow complete effect if active
-        this.renderRainbowCompleteEffect();
     }
 
     renderWallBreakEffects() {
@@ -598,71 +626,64 @@ class Game {
     }
     
     renderRainbowTrail() {
-        if (this.collectedColors.length === 0) return;
+        if (this.collectedColors.length === 0 || this.playerTrail.length < 2) return;
         
-        const time = Date.now() * 0.003; // Slower rotation for smoother look
-        const playerCenterX = this.player.x + this.cellSize / 2;
-        const playerCenterY = this.player.y + this.cellSize / 2;
+        // Calculate how many trail positions each color should occupy
+        const positionsPerColor = Math.max(2, Math.floor(this.playerTrail.length / Math.max(this.collectedColors.length, 1)));
         
-        this.collectedColors.forEach((color, index) => {
-            // Create a circular swirl pattern
-            const baseAngle = (index / this.collectedColors.length) * Math.PI * 2;
-            const rotationSpeed = time;
-            const angle = baseAngle + rotationSpeed;
+        this.collectedColors.forEach((color, colorIndex) => {
+            // Calculate which trail positions this color should occupy
+            const startPos = (colorIndex + 1) * positionsPerColor;
+            const endPos = Math.min(startPos + positionsPerColor, this.playerTrail.length);
             
-            // Create multiple rings of colors
-            const ringNumber = Math.floor(index / 7); // 7 colors per ring (full rainbow)
-            const baseRadius = 25 + ringNumber * 25; // Each ring is 25 pixels further out
+            // Skip if not enough trail positions
+            if (startPos >= this.playerTrail.length) return;
             
-            // Add some gentle wobble for organic feel
-            const wobble = Math.sin(time * 2 + index * 0.5) * 3;
-            const radius = baseRadius + wobble;
-            
-            const x = playerCenterX + Math.cos(angle) * radius;
-            const y = playerCenterY + Math.sin(angle) * radius;
-            
-            // Dot size gets slightly smaller for outer rings
-            const dotSize = Math.max(4, 8 - ringNumber * 1);
-            
-            // Create the main dot
-            this.ctx.fillStyle = color;
-            this.ctx.beginPath();
-            this.ctx.arc(x, y, dotSize, 0, Math.PI * 2);
-            this.ctx.fill();
-            
-            // Add a glowing effect
-            this.ctx.save();
-            this.ctx.shadowColor = color;
-            this.ctx.shadowBlur = 15;
-            this.ctx.globalAlpha = 0.8;
-            this.ctx.beginPath();
-            this.ctx.arc(x, y, dotSize, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.restore();
-            
-            // Add connecting trails between dots for extra effect
-            if (index > 0) {
-                const prevIndex = index - 1;
-                const prevBaseAngle = (prevIndex / this.collectedColors.length) * Math.PI * 2;
-                const prevAngle = prevBaseAngle + rotationSpeed;
-                const prevRingNumber = Math.floor(prevIndex / 7);
-                const prevBaseRadius = 25 + prevRingNumber * 25;
-                const prevWobble = Math.sin(time * 2 + prevIndex * 0.5) * 3;
-                const prevRadius = prevBaseRadius + prevWobble;
+            // Draw the color segment as connected dots
+            for (let i = startPos; i < endPos; i++) {
+                if (i >= this.playerTrail.length) break;
                 
-                const prevX = playerCenterX + Math.cos(prevAngle) * prevRadius;
-                const prevY = playerCenterY + Math.sin(prevAngle) * prevRadius;
+                const trailPos = this.playerTrail[i];
+                const progress = (i - startPos) / (positionsPerColor - 1);
                 
-                // Draw a faint connecting line
+                // Size decreases as we go further back in the trail
+                const baseSize = 8 - (colorIndex * 0.3);
+                const sizeMultiplier = 1 - (progress * 0.3); // Slightly smaller at the end of each segment
+                const dotSize = Math.max(3, baseSize * sizeMultiplier);
+                
+                // Alpha decreases for older trail positions
+                const alpha = Math.max(0.3, 1 - (i / this.playerTrail.length) * 0.7);
+                
+                // Create the main dot
                 this.ctx.save();
-                this.ctx.strokeStyle = color;
-                this.ctx.globalAlpha = 0.3;
-                this.ctx.lineWidth = 2;
+                this.ctx.globalAlpha = alpha;
+                this.ctx.fillStyle = color;
                 this.ctx.beginPath();
-                this.ctx.moveTo(prevX, prevY);
-                this.ctx.lineTo(x, y);
-                this.ctx.stroke();
+                this.ctx.arc(trailPos.x, trailPos.y, dotSize, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Add glow effect
+                this.ctx.shadowColor = color;
+                this.ctx.shadowBlur = 10;
+                this.ctx.beginPath();
+                this.ctx.arc(trailPos.x, trailPos.y, dotSize, 0, Math.PI * 2);
+                this.ctx.fill();
                 this.ctx.restore();
+                
+                // Draw connecting line to previous dot for smoother trail
+                if (i > startPos && i > 0) {
+                    const prevPos = this.playerTrail[i - 1];
+                    this.ctx.save();
+                    this.ctx.globalAlpha = alpha * 0.6;
+                    this.ctx.strokeStyle = color;
+                    this.ctx.lineWidth = dotSize * 0.8;
+                    this.ctx.lineCap = 'round';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(prevPos.x, prevPos.y);
+                    this.ctx.lineTo(trailPos.x, trailPos.y);
+                    this.ctx.stroke();
+                    this.ctx.restore();
+                }
             }
         });
     }
