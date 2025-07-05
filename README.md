@@ -1,5 +1,8 @@
 # Catch all the colors Game 🌈
 
+## 🎮 Play Online
+**[Play the game now on GitHub Pages!](https://coriakin.github.io/game-catch-all-the-colors/)**
+
 ## Background / Why?
 To get my kid more into gaming, I had an idea of getting her excited about coming up with ideas for games that she can then play. It is a struggle finding games that are not scary, or where you are punished when failing and so on. We bounce ideas, and will probably prototype on paper and I will try to implement the ideas, we shall see where this ends up and if it's a regular thing.
 
